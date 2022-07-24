@@ -48,42 +48,40 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 			
 		// finding pivot element
 		cout<<"Finding pivot element\n";
-		int flag = 1, pivot;
-		for(j=0; j<v; j++){
-			// if coefficient of basic variable is zero
-			if(tab[index][j] == 0)
+		int flag = 1, pivot, change;
+		for(int i=0; i<v; i++){
+			// if coefficient of non-basic variable is zero
+			if(tab[index][i] == 0)
 				continue;
-				
-			int change;
+			
 			// if lower bound is violated, we need to increase basic variable
-			cout<<"Inequality = "<<(ineqop==1?">=\n":"<=\n");
 			if(ineqop == 1){
-				change = (assignment[v+index]-lowerbound[v+index])/tab[index][j];
-				// if basic variable has positive coeff, check upper bound
-				if(tab[index][v] > 0 and change <= upperbound[index+v] ){
-					pivot = j;
+				change = (assignment[v+index]-lowerbound[v+index])/tab[index][i];
+				// if non-basic variable has positive coeff, check upper bound
+				if(tab[index][v] > 0 and assignment[i]+change <= upperbound[index+v] ){
+					pivot = i;
 					flag = 0;
 					break;
 				}
-				// if basic variable has negative coeff, check lower bound
-				else if(tab[index][v] < 0 and change >= lowerbound[index+v] ){
-					pivot = j;
+				// if non-basic variable has negative coeff, check lower bound
+				else if(tab[index][v] < 0 and assignment[i]-change >= lowerbound[index+v] ){
+					pivot = i;
 					flag = 0;
 					break;
 				}
 			}
 			// if upper bound is violated, we need to reduce basic variable
 			else if(ineqop == 2){
-				change = (upperbound[v+index]-assignment[v+index])/tab[index][j];
-				// if basic variable has positive coeff, check lower bound
-				if(tab[index][v] > 0 and change >= lowerbound[index+v] ){
-					pivot = j;
+				change = (upperbound[v+index]-assignment[v+index])/tab[index][i];
+				// if non-basic variable has positive coeff, check lower bound
+				if(tab[index][v] > 0 and assignment[i]-change >= lowerbound[index+v] ){
+					pivot = i;
 					flag = 0;
 					break;
 				}
-				// if basic variable has negative coeff, check upper bound
-				else if(tab[index][v] < 0 and change <= upperbound[index+v] ){
-					pivot = j;
+				// if non-basic variable has negative coeff, check upper bound
+				else if(tab[index][v] < 0 and assignment[i]+change <= upperbound[index+v] ){
+					pivot = i;
 					flag = 0;
 					break;
 				}
@@ -97,7 +95,75 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 			cout<<"Pivot is "<<vars[pivot]<<"\n";
 		}
 		
-		// Perform pivot operation
+		// Perform pivot operation - incomplete
+		cout<<"Pivot operation is still incomplete\n";
+		
+		// if lower bound is violated
+		if(ineqop == 1){
+			// adjust pivot
+			if(tab[index][v] > 0){
+				assignment[pivot] += change;
+			}
+			else if(tab[index][v] < 0){
+				assignment[pivot] -= change;
+			}
+			
+			// adjust basic variable
+			assignment[index] = lowerbound[index];
+		}
+		
+		// if upper bound is violated
+		else if(ineqop == 2){
+			// adjust pivot
+			if(tab[index][v] > 0){
+				assignment[pivot] -= change;
+			}
+			else if(tab[index][v] < 0){
+				assignment[pivot] += change;
+			}
+			
+			// adjust basic variable
+			assignment[index] = upperbound[index];
+			
+		}
+		
+		// modify tableau
+		int pivot_coeff = tab[index][pivot];
+		
+		// modify violated row
+		for(int i=0; i<v; i++){
+			if(i == pivot)
+				tab[index][i] = 1/pivot_coeff;
+			else
+				tab[index][i] *= -1/pivot_coeff;
+		}
+		
+		// modify remaining rows
+		for(int i=0; i<n; i++){
+			if(i == index)
+				continue;
+			for(int k=0; k<v; k++){
+				if(k == pivot)
+					continue;
+				else{
+					tab[i][k] += tab[i][pivot] * tab[index][k];
+				}
+			}
+			tab[i][pivot] *= 1/pivot_coeff;
+		}
+		
+		// swap assignment rows
+		swap(assignment[index], assignment[pivot]);
+		swap(lowerbound[index], lowerbound[pivot]);
+		swap(upperbound[index], upperbound[pivot]);
+		
+		// redo asssignments
+		for(int i=0; i<n; i++){
+			assignment[v+i] = 0;
+			for(int j=0; j<v; j++){
+				assignment[v+i] += assignment[j]*tab[i][j]; 
+			}
+		}
 		
 		j++;
 	}
