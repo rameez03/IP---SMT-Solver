@@ -1,12 +1,53 @@
 #include<bits/stdc++.h>
 #include<limits.h>
+#include<algorithm>
+
 using namespace std;
 
-void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
+void arrswap(double &a, double &b){
+	double temp;
+	temp = a;
+	a = b;
+	b = temp;
+}
 
-	vector<int> assignment((n+v), 0);
-	vector<int> lowerbound((n+v), INT_MIN);
-	vector<int> upperbound((n+v), INT_MAX);
+void printTableau(vector<vector<double>> tab, int n, int v){
+	for(int i=0; i<n; i++){
+		for(int j=0; j<v; j++){
+			cout<<tab[i][j]<<" ";
+		}
+		cout<<"\n";
+	}
+}
+
+/*
+void printBoundsAssignments(vector<double> assignment, vector<double> lowerbound, vector<double> upperbound, int n, int v){
+	cout<<"Current assignment: ";
+	for(int i=0; i<n+v; i++)
+		cout<<assignment[i]<<" ";
+	cout<<"\n";
+	
+	cout<<"Lower bound: ";
+	for(int i=0; i<n+v; i++)
+		cout<<lowerbound[i]<<" ";
+	cout<<"\n";
+	
+	cout<<"Upper bound: ";
+	for(int i=0; i<n+v; i++)
+		cout<<upperbound[i]<<" ";
+	cout<<"\n";
+}
+*/
+
+void simplex(vector<string> vars, vector<vector<double>> tab, int n, int v){
+
+	vector<double> assignment((n+v), 0);
+	vector<double> lowerbound((n+v), INT_MIN);
+	vector<double> upperbound((n+v), INT_MAX);
+	vector<int> posvar(v);
+	
+	for(int i=0; i<v; i++)
+		posvar[i] = i;
 	
 	// bounds of basic variables
 	for(int i=v; i<v+n; i++){
@@ -16,20 +57,23 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 			upperbound[i] = tab[i-v][v+1];
 	}
 	
-	int j=0;
-	while(j<1){
+	int p=0;
+	while(1){	
+		//printTableau(tab, n, v);
+		//printBoundsAssignments(assignment, lowerbound, upperbound, n, v);
+		
 		int index = -1, ineqop;
 		for(int i=0; i<n; i++){
-			int j;
-			for(j=0; j<v; j++){
-				assignment[v+i] += assignment[j]*tab[i][j];
-			}
-			ineqop = tab[i][j];
-			if((tab[i][j] == 1) and (assignment[v+i] < tab[i][j+1])){
+			//int j;
+			//for(j=0; j<v; j++){
+			//	assignment[v+i] += assignment[j]*tab[i][j];
+			//}
+			ineqop = tab[i][v];
+			if((ineqop == 1) and (assignment[v+i] < lowerbound[v+i])){
 				index = i;
 				break;
 			}
-			else if((tab[i][j] == 2) and (assignment[v+i] > tab[i][j+1])){
+			else if((ineqop == 2) and (assignment[v+i] > upperbound[v+i])){
 				index = i;
 				break;
 			}
@@ -37,17 +81,14 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 		if (index == -1){
 			cout<<"Satisfiable\n";
 			cout<<"Satisfying assignment is:\n";
-			for(j=0; j<v; j++){
-				cout<<"\t"<<vars[j]<<" = "<<assignment[j]<<", ";
+			for(int j=0; j<v; j++){
+				cout<<"\t"<<vars[j]<<" = "<<assignment[posvar[j]]<<", ";
 			}
 			cout<<"\n";
 			return;
 		}
-		else
-			cout<<"Basic variable "<<(index+1)<<" violated\n";
 			
 		// finding pivot element
-		cout<<"Finding pivot element\n";
 		int flag = 1, pivot, change;
 		for(int i=0; i<v; i++){
 			// if coefficient of non-basic variable is zero
@@ -56,15 +97,16 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 			
 			// if lower bound is violated, we need to increase basic variable
 			if(ineqop == 1){
-				change = (assignment[v+index]-lowerbound[v+index])/tab[index][i];
+				change = (lowerbound[v+index]-assignment[v+index])/tab[index][i];
+				
 				// if non-basic variable has positive coeff, check upper bound
-				if(tab[index][v] > 0 and assignment[i]+change <= upperbound[index+v] ){
+				if(tab[index][i] > 0 and assignment[i]+change <= upperbound[index+v] ){
 					pivot = i;
 					flag = 0;
 					break;
 				}
 				// if non-basic variable has negative coeff, check lower bound
-				else if(tab[index][v] < 0 and assignment[i]-change >= lowerbound[index+v] ){
+				else if(tab[index][i] < 0 and assignment[i]+change >= lowerbound[index+v] ){
 					pivot = i;
 					flag = 0;
 					break;
@@ -72,15 +114,15 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 			}
 			// if upper bound is violated, we need to reduce basic variable
 			else if(ineqop == 2){
-				change = (upperbound[v+index]-assignment[v+index])/tab[index][i];
+				change = (assignment[v+index]-upperbound[v+index])/tab[index][i];
 				// if non-basic variable has positive coeff, check lower bound
-				if(tab[index][v] > 0 and assignment[i]-change >= lowerbound[index+v] ){
+				if(tab[index][i] > 0 and assignment[i]-change >= lowerbound[index+v] ){
 					pivot = i;
 					flag = 0;
 					break;
 				}
 				// if non-basic variable has negative coeff, check upper bound
-				else if(tab[index][v] < 0 and assignment[i]+change <= upperbound[index+v] ){
+				else if(tab[index][i] < 0 and assignment[i]-change <= upperbound[index+v] ){
 					pivot = i;
 					flag = 0;
 					break;
@@ -91,12 +133,9 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 			cout<<"The system of inequalities is unsatisfiable\n";
 			return;
 		}
-		else{
-			cout<<"Pivot is "<<vars[pivot]<<"\n";
-		}
 		
-		// Perform pivot operation - incomplete
-		cout<<"Pivot operation is still incomplete\n";
+		// Perform pivot operation 
+		posvar[pivot] = v+index;
 		
 		// if lower bound is violated
 		if(ineqop == 1){
@@ -109,7 +148,7 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 			}
 			
 			// adjust basic variable
-			assignment[index] = lowerbound[index];
+			assignment[v+index] = lowerbound[v+index];
 		}
 		
 		// if upper bound is violated
@@ -123,7 +162,7 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 			}
 			
 			// adjust basic variable
-			assignment[index] = upperbound[index];
+			assignment[v+index] = upperbound[v+index];
 			
 		}
 		
@@ -133,9 +172,9 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 		// modify violated row
 		for(int i=0; i<v; i++){
 			if(i == pivot)
-				tab[index][i] = 1/pivot_coeff;
+				tab[index][i] = 1.0/pivot_coeff;
 			else
-				tab[index][i] *= -1/pivot_coeff;
+				tab[index][i] *= -1.0/pivot_coeff;
 		}
 		
 		// modify remaining rows
@@ -149,13 +188,13 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 					tab[i][k] += tab[i][pivot] * tab[index][k];
 				}
 			}
-			tab[i][pivot] *= 1/pivot_coeff;
+			tab[i][pivot] *= 1.0/pivot_coeff;
 		}
 		
 		// swap assignment rows
-		swap(assignment[index], assignment[pivot]);
-		swap(lowerbound[index], lowerbound[pivot]);
-		swap(upperbound[index], upperbound[pivot]);
+		arrswap(assignment[v+index], assignment[pivot]);
+		arrswap(lowerbound[v+index], lowerbound[pivot]);
+		arrswap(upperbound[v+index], upperbound[pivot]);
 		
 		// redo asssignments
 		for(int i=0; i<n; i++){
@@ -165,7 +204,7 @@ void simplex(vector<string> vars, vector<vector<int>> tab, int n, int v){
 			}
 		}
 		
-		j++;
+		p++;
 	}
 }
 
@@ -183,7 +222,7 @@ int main(){
 		cout<<"variable "<<(j+1)<<": ";
 		cin>>vars[j];
 	}
-	vector<vector<int>> tab(n, vector<int>(v+2));
+	vector<vector<double>> tab(n, vector<double>(v+2));
 	for(int i=0; i<n; i++){
 		cout<<"\nEnter coefficients of variables in inequality "<<(i+1)<<"\n";
 		int j;
